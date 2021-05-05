@@ -28,6 +28,16 @@ const addToList = (id, cb) => {
   container.appendChild(div);
 }
 
+const randomizePosition = () => {
+  const rnd = () => Math.random() - 0.5 * 2;  
+
+  return {
+    x: rnd(),
+    y: rnd(),
+    z: rnd()
+  }
+}
+
 export default new class Renderer {
   constructor() {
     this.renderer = new WebGLRenderer({ antialias: true });
@@ -37,12 +47,6 @@ export default new class Renderer {
 
     this.camera = new Camera();
     this.scene = new Scene();
-
-    var light = new DirectionalLight( 0xffffff );
-    light.position.set( 0, 1, 1 ).normalize();
-
-    this.scene.add(light);
-    this.scene.add(new AmbientLight(0x404040));
 
     this.init();
   }
@@ -58,81 +62,64 @@ export default new class Renderer {
   }
 
   create() {
-    const geometry = document.querySelector('select#geometry').value;
+    const type = document.querySelector('select#geometry').value;
     const scale = +document.querySelector('input#scale').value;
 
-    let id = -1;
+    const mesh = this.createObject(type, scale);
 
-    switch (geometry) {
-      case 'cube':
-        id = this.createCube(scale);
-        break;
-
-      case 'cone':
-        id = this.createCone(scale)
-        break;
-
-      case 'sphere':
-        id = this.createSphere(scale);
-        break;
-    }
+    this.scene.add(mesh);
 
     this.render();
     
-    addToList(id, () => this.remove(id));
+    addToList(mesh.uuid, () => this.remove(mesh.uuid));
   }
 
   init() {
+    const light = new DirectionalLight(0xffffff);
+    light.position.set(0, 1, 1).normalize();
+    this.scene.add(light);
+
+    this.scene.add(new AmbientLight(0x404040));
+
     this.camera = new PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 10);
     this.camera.position.z = 1.5;
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.addEventListener('change', () => {
-      this.renderer.render(this.scene, this.camera);
+    this.controls.addEventListener('change', () => this.renderer.render(this.scene, this.camera));
+  }
+
+  createObject(type, scale) {
+    let geometry = null;
+
+    switch (type) {
+      case 'cube':
+        geometry = new BoxGeometry(0.4, 0.4, 0.4);
+        break;
+
+      case 'cone':
+        geometry = new ConeGeometry(0.4, 1, 8);
+        break;
+
+      case 'sphere':
+        geometry = new SphereGeometry(0.4, 8, 8, 0, Math.PI * 2, 0, Math.PI * 2);
+        break;
+    }
+
+    const material = new MeshPhongMaterial({ 
+      ambient: 0x050505, 
+      color: 0x0033ff, 
+      specular: 0x555555, 
+      shininess: 30 
     });
-  }
 
-  createCube(scale) {
-    const color = 0xfaabb1;
-    const geometry = new BoxGeometry(0.4, 0.4, 0.4);
-    const material = new MeshPhongMaterial({ ambient: 0x050505, color: 0x0033ff, specular: 0x555555, shininess: 30 });
+    const mesh = new Mesh(geometry, material);
+    mesh.scale.set(scale, scale, scale);
     
-    const cube = new Mesh(geometry, material);
-    cube.scale.set(scale, scale, scale);
+    const pos = randomizePosition();
+    mesh.position.set(pos.x, pos.y, pos.z);
 
-    this.scene.add(cube);
-
-    return cube.uuid;
+    return mesh;
   }
-
-  createCone(scale) {
-    const color = 0xfaabb1;
-    const geometry = new ConeGeometry(0.4, 1, 8);
-    const material = new MeshPhongMaterial({ ambient: 0x050505, color: 0x0033ff, specular: 0x555555, shininess: 30 });
-
-    const cone = new Mesh(geometry, material);
-    cone.scale.set(scale, scale, scale);
-
-    this.scene.add(cone);
-
-    return cone.uuid;
-  }
-
-  createSphere(scale) {
-    const color = 0xfaabb1;
-    const geometry = new SphereGeometry(0.4, 8, 8, 0, Math.PI * 2, 0, Math.PI * 2);
-    const material = new MeshPhongMaterial({ color } );
-
-    const sphere = new Mesh(geometry, material);
-    sphere.scale.set(scale, scale, scale);
-
-    this.scene.add(sphere);
-
-    return sphere.uuid;
-  }
-
-
-
 
 
   // here is task misunderstand
